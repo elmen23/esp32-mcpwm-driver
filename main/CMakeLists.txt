@@ -13,6 +13,3 @@ idf_component_register(
         Web
         Storage
 )
-
-# Link all project components
-set(EXTRA_COMPONENT_DIRS ${CMAKE_SOURCE_DIR}/components)
