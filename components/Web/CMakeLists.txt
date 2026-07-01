@@ -2,7 +2,7 @@
 # HTTP server, REST API endpoints, embedded web assets
 
 idf_component_register(
-    SRCS            ""
+    SRCS            "http_server.cpp"
     INCLUDE_DIRS    "."
     EMBED_FILES
         index.html
@@ -10,5 +10,9 @@ idf_component_register(
         script.js
     REQUIRES
         esp_http_server
+        esp_timer
         esp_log
+        json
+        Drivers
+        Network
 )
