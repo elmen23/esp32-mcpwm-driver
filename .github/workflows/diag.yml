@@ -1,0 +1,81 @@
+name: DIAGNOSTIC — Environment Check
+
+on:
+  push:
+    paths:
+      - '.github/workflows/diag.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:release-v5.4
+
+    steps:
+      - name: 1. Checkout
+        uses: actions/checkout@v4
+
+      - name: 2. Environment variables
+        run: |
+          echo "=== IDF_PATH ==="
+          echo "${IDF_PATH:-NOT SET}"
+          echo "=== PATH ==="
+          echo "$PATH" | tr ':' '\n'
+          echo "=== SHELL ==="
+          echo "$SHELL"
+          echo "=== HOME ==="
+          echo "$HOME"
+          echo "=== GITHUB_WORKSPACE ==="
+          echo "$GITHUB_WORKSPACE"
+
+      - name: 3. Working directory and files
+        run: |
+          echo "=== PWD ==="
+          pwd
+          echo "=== ls -la ==="
+          ls -la
+          echo "=== ls -la components/ ==="
+          ls -la components/ 2>/dev/null || echo "NO components/"
+          echo "=== ls -la main/ ==="
+          ls -la main/ 2>/dev/null || echo "NO main/"
+
+      - name: 4. Locate idf.py
+        run: |
+          echo "=== which idf.py ==="
+          which idf.py || echo "NOT FOUND in PATH"
+          echo "=== ls IDF_PATH/tools/ ==="
+          ls "${IDF_PATH}/tools/" 2>/dev/null || echo "IDF_PATH not set"
+          echo "=== ls /opt/esp/ ==="
+          ls /opt/esp/ 2>/dev/null || echo "NO /opt/esp/"
+          echo "=== find idf.py ==="
+          find / -name "idf.py" -type f 2>/dev/null | head -5 || echo "NONE"
+
+      - name: 5. Try idf.py version
+        id: idf_version
+        run: |
+          idf.py --version 2>&1 || echo "EXIT CODE: $?"
+        continue-on-error: true
+
+      - name: 6. Try idf.py set-target
+        id: set_target
+        run: |
+          idf.py set-target esp32 2>&1 || echo "EXIT CODE: $?"
+        continue-on-error: true
+
+      - name: 7. Try idf.py build (capture ALL output)
+        id: build
+        run: |
+          idf.py build 2>&1 || echo "EXIT CODE: $?"
+        continue-on-error: true
+
+      - name: 8. Summary
+        if: always()
+        run: |
+          echo "============================================"
+          echo "idf_version outcome: ${{ steps.idf_version.outcome }}"
+          echo "set_target  outcome: ${{ steps.set_target.outcome }}"
+          echo "build       outcome: ${{ steps.build.outcome }}"
+          echo "============================================"
