@@ -99,40 +99,48 @@ esp_err_t init() noexcept {
         mcpwm_new_generator(s_oper, &gen_b_cfg, &s_gen_b), TAG, "gen_b");
 
     /* ── 6. Actions: Gen-A HIGH on timer=0, LOW on compare ── */
-    ESP_RETURN_ON_ERROR(
-        mcpwm_generator_set_action_on_timer_event(
-            s_gen_a,
-            MCPWM_GEN_TIMER_EVENT_ACTION(
-                MCPWM_TIMER_DIRECTION_UP,
-                MCPWM_TIMER_EVENT_EMPTY,
-                MCPWM_GEN_ACTION_HIGH)),
-        TAG, "gen_a timer");
-
-    ESP_RETURN_ON_ERROR(
-        mcpwm_generator_set_action_on_compare_event(
-            s_gen_a,
-            MCPWM_GEN_COMPARE_EVENT_ACTION(
-                MCPWM_TIMER_DIRECTION_UP, s_cmpr,
-                MCPWM_GEN_ACTION_LOW)),
-        TAG, "gen_a compare");
+    {
+        mcpwm_gen_timer_event_action_t ta = {
+            .direction = MCPWM_TIMER_DIRECTION_UP,
+            .event     = MCPWM_TIMER_EVENT_EMPTY,
+            .action    = MCPWM_GEN_ACTION_HIGH,
+        };
+        ESP_RETURN_ON_ERROR(
+            mcpwm_generator_set_action_on_timer_event(s_gen_a, ta),
+            TAG, "gen_a timer");
+    }
+    {
+        mcpwm_gen_compare_event_action_t ca = {
+            .direction  = MCPWM_TIMER_DIRECTION_UP,
+            .comparator = s_cmpr,
+            .action     = MCPWM_GEN_ACTION_LOW,
+        };
+        ESP_RETURN_ON_ERROR(
+            mcpwm_generator_set_action_on_compare_event(s_gen_a, ca),
+            TAG, "gen_a compare");
+    }
 
     /* ── 7. Actions: Gen-B LOW on timer=0, HIGH on compare (complementary) ── */
-    ESP_RETURN_ON_ERROR(
-        mcpwm_generator_set_action_on_timer_event(
-            s_gen_b,
-            MCPWM_GEN_TIMER_EVENT_ACTION(
-                MCPWM_TIMER_DIRECTION_UP,
-                MCPWM_TIMER_EVENT_EMPTY,
-                MCPWM_GEN_ACTION_LOW)),
-        TAG, "gen_b timer");
-
-    ESP_RETURN_ON_ERROR(
-        mcpwm_generator_set_action_on_compare_event(
-            s_gen_b,
-            MCPWM_GEN_COMPARE_EVENT_ACTION(
-                MCPWM_TIMER_DIRECTION_UP, s_cmpr,
-                MCPWM_GEN_ACTION_HIGH)),
-        TAG, "gen_b compare");
+    {
+        mcpwm_gen_timer_event_action_t ta = {
+            .direction = MCPWM_TIMER_DIRECTION_UP,
+            .event     = MCPWM_TIMER_EVENT_EMPTY,
+            .action    = MCPWM_GEN_ACTION_LOW,
+        };
+        ESP_RETURN_ON_ERROR(
+            mcpwm_generator_set_action_on_timer_event(s_gen_b, ta),
+            TAG, "gen_b timer");
+    }
+    {
+        mcpwm_gen_compare_event_action_t ca = {
+            .direction  = MCPWM_TIMER_DIRECTION_UP,
+            .comparator = s_cmpr,
+            .action     = MCPWM_GEN_ACTION_HIGH,
+        };
+        ESP_RETURN_ON_ERROR(
+            mcpwm_generator_set_action_on_compare_event(s_gen_b, ca),
+            TAG, "gen_b compare");
+    }
 
     /* ── 8. Dead time: RED on Gen‑A, FED on Gen‑B (each delays its own rising edge) ── */
     apply_dt_to_generator(s_gen_a, s_cfg.dead_time_red_ns);

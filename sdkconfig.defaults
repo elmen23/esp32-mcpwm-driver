@@ -1,5 +1,8 @@
 # ── ESP32 MCPWM Driver — Minimal sdkconfig defaults ──
 
+# Target chip
+CONFIG_IDF_TARGET_ESP32=y
+
 # Partition Table
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"

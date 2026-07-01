@@ -20,7 +20,7 @@
 #include "esp_timer.h"
 #include "cJSON.h"
 #include <cstring>
-#include <string>
+#include <cstdio>
 
 static constexpr const char *TAG = "HTTP";
 
@@ -83,7 +83,9 @@ static void send_json(httpd_req_t *req, cJSON *root) noexcept {
 static void send_json_err(httpd_req_t *req, int code, const char *msg) noexcept {
     httpd_resp_set_type(req, "application/json");
     add_cors_headers(req);
-    httpd_resp_set_status(req, std::to_string(code).c_str());
+    char status_str[8];
+    snprintf(status_str, sizeof(status_str), "%d", code);
+    httpd_resp_set_status(req, status_str);
     cJSON *root = cJSON_CreateObject();
     cJSON_AddStringToObject(root, "error", msg);
     char *str = cJSON_PrintUnformatted(root);
