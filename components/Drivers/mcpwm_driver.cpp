@@ -46,11 +46,14 @@ static void update_comparator() noexcept {
     mcpwm_comparator_set_compare_value(s_cmpr, cmp);
 }
 
-/** Apply dead time to a generator — delay on rising edge (RED/FED). */
+/** Apply dead time to a generator — posedge delay (RED) / negedge delay (FED). */
 static void apply_dt_to_generator(const mcpwm_gen_handle_t gen,
                                    const uint32_t dt_ns) noexcept {
-    mcpwm_dead_time_config_t dt_cfg {};
-    dt_cfg.red_delay_ticks = utils::ns_to_deadtime_ticks(dt_ns);
+    mcpwm_dead_time_config_t dt_cfg {
+        .posedge_delay_ticks = utils::ns_to_deadtime_ticks(dt_ns),
+        .negedge_delay_ticks = 0,
+        .flags.invert_output = false,
+    };
     mcpwm_generator_set_dead_time(gen, &dt_cfg);
 }
 
@@ -90,18 +93,18 @@ esp_err_t init() noexcept {
     mcpwm_generator_config_t gen_a_cfg {};
     ESP_RETURN_ON_ERROR(
         mcpwm_new_generator(s_oper, &gen_a_cfg, &s_gen_a), TAG, "gen_a");
-    gpio_set_direction(static_cast<gpio_num_t>(utils::GPIO_PWM_A), GPIO_MODE_OUTPUT);
     ESP_RETURN_ON_ERROR(
-        mcpwm_generator_set_gpio(s_gen_a, MCPWM_GEN_GPIO_18, static_cast<gpio_num_t>(utils::GPIO_PWM_A)),
+        mcpwm_generator_set_gpio(s_gen_a, utils::GPIO_PWM_A,
+                                 MCPWM_GEN_GPIO_TYPE_SIGNAL),
         TAG, "gen_a_gpio");
 
     /* ── 5. Generator B — low‑side on GPIO 19 ── */
     mcpwm_generator_config_t gen_b_cfg {};
     ESP_RETURN_ON_ERROR(
         mcpwm_new_generator(s_oper, &gen_b_cfg, &s_gen_b), TAG, "gen_b");
-    gpio_set_direction(static_cast<gpio_num_t>(utils::GPIO_PWM_B), GPIO_MODE_OUTPUT);
     ESP_RETURN_ON_ERROR(
-        mcpwm_generator_set_gpio(s_gen_b, MCPWM_GEN_GPIO_19, static_cast<gpio_num_t>(utils::GPIO_PWM_B)),
+        mcpwm_generator_set_gpio(s_gen_b, utils::GPIO_PWM_B,
+                                 MCPWM_GEN_GPIO_TYPE_SIGNAL),
         TAG, "gen_b_gpio");
 
     /* ── 6. Actions: Gen-A HIGH on timer=0, LOW on compare ── */
@@ -155,7 +158,9 @@ esp_err_t init() noexcept {
     /* ── 9. Set initial comparator ── */
     update_comparator();
 
-    /* ── 10. Start with outputs OFF ── */
+    /* ── 10. Enable timer and start with outputs OFF ── */
+    ESP_RETURN_ON_ERROR(
+        mcpwm_timer_enable(s_timer), TAG, "timer_enable");
     ESP_RETURN_ON_ERROR(
         mcpwm_timer_start_stop(s_timer, MCPWM_TIMER_STOP_FULL),
         TAG, "timer_stop");
@@ -201,6 +206,8 @@ esp_err_t get_config(Config &cfg) noexcept {
 
 /* ────────────────────────────────────────────
  *  set_frequency  —  preserves duty %
+ *  Uses mcpwm_timer_reconfigure() for glitch-free
+ *  runtime frequency changes.
  * ──────────────────────────────────────────── */
 
 esp_err_t set_frequency(const uint32_t freq_hz) noexcept {
@@ -210,14 +217,22 @@ esp_err_t set_frequency(const uint32_t freq_hz) noexcept {
     }
 
     s_cfg.frequency_hz = freq_hz;
-    // NOTE: mcpwm_timer_set_period may not exist in v5.4.
-    // Frequency change currently unsupported at runtime;
-    // init() must be called with the desired initial frequency.
-    (void)freq_hz;
 
-    /* CRITICAL: recalculate comparator so duty % stays correct */
+    /* ── Reconfigure timer with new period ── */
+    mcpwm_timer_config_t reconfig {};
+    reconfig.clk_src       = MCPWM_TIMER_CLK_SRC_DEFAULT;
+    reconfig.resolution_hz = utils::MCPWM_RESOLUTION_HZ;
+    reconfig.count_mode    = MCPWM_TIMER_COUNT_MODE_UP;
+    reconfig.period_ticks  = utils::MCPWM_RESOLUTION_HZ / freq_hz;
+    ESP_RETURN_ON_ERROR(
+        mcpwm_timer_reconfigure(s_timer, &reconfig),
+        TAG, "timer_reconfigure");
+
+    /* ── Recalculate comparator so duty % stays correct ── */
     update_comparator();
 
+    ESP_LOGI(TAG, "Frequency updated: %" PRIu32 " kHz  (period=%" PRIu32 " ticks)",
+             freq_hz / 1000, reconfig.period_ticks);
     return ESP_OK;
 }
 
