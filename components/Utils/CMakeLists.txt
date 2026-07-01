@@ -1,8 +1,8 @@
 # ── Utils Component ──
-# Numeric helpers, range clamping, unit conversions
+# Numeric helpers, range clamping, tick conversion
 
 idf_component_register(
-    SRCS            ""
+    SRCS            "numeric_utils.hpp"
     INCLUDE_DIRS    "."
     REQUIRES
 )
