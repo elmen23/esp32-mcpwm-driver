@@ -1,8 +1,8 @@
 # ── Network Component ──
-# WiFi AP mode, optional STA mode, connection management
+# WiFi AP mode, optional STA mode, NVS init, connection management
 
 idf_component_register(
-    SRCS            ""
+    SRCS            "wifi_ap.cpp"
     INCLUDE_DIRS    "."
     REQUIRES
         esp_wifi
