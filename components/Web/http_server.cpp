@@ -20,6 +20,7 @@
 #include "esp_timer.h"
 #include "cJSON.h"
 #include <cstring>
+#include <string>
 
 static constexpr const char *TAG = "HTTP";
 

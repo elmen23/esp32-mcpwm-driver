@@ -87,7 +87,14 @@ esp_err_t load_config(mcpwm::Config &cfg) noexcept {
 }
 
 esp_err_t erase_config() noexcept {
-    esp_err_t err = nvs_flash_erase_partition("nvs");
+    nvs_handle_t handle {};
+    esp_err_t err = nvs_open(NS_NAME, NVS_READWRITE, &handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Erase: nvs_open failed: %s", esp_err_to_name(err));
+        return err;
+    }
+    err = nvs_erase_all(handle);
+    nvs_close(handle);
     if (err == ESP_OK) {
         ESP_LOGI(TAG, "Config erased (factory reset)");
     } else {
