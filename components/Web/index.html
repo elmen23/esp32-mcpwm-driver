@@ -3,11 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESP32 MCPWM Driver</title>
-    <link rel="stylesheet" href="style.css">
+    <title>ESP32 MCPWM — Industrial Driver</title>
+    <link rel="stylesheet" href="/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
 </head>
 <body>
-    <h1>ESP32 MCPWM Driver</h1>
-    <p>Web UI — Phase 5</p>
+
+<!-- ═══ TOP BAR ═══ -->
+<header class="topbar">
+    <div class="topbar-brand">
+        <span class="brand-icon">⚡</span>
+        <div>
+            <h1 class="brand-title">MCPWM Driver</h1>
+            <span class="brand-sub">Industrial Half-Bridge Controller</span>
+        </div>
+    </div>
+    <div class="topbar-center">
+        <div class="status-pill" id="sysStatus">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">INITIALIZING</span>
+        </div>
+        <div class="wifi-badge" id="wifiBadge">
+            <span class="wifi-icon">&#x1F4F6;</span>
+            <span id="wifiInfo">--</span>
+        </div>
+    </div>
+    <div class="topbar-right">
+        <button class="btn btn-danger btn-lg" id="btnEStop">
+            <span class="estop-icon">&#9632;</span> EMERGENCY STOP
+        </button>
+    </div>
+</header>
+
+<!-- ═══ DASHBOARD GRID ═══ -->
+<main class="dashboard">
+
+    <!-- Power Output Card -->
+    <section class="card card-power">
+        <div class="card-header">
+            <h2>Power Output</h2>
+            <span class="value-badge" id="badgePower">0.0 kW</span>
+        </div>
+        <div class="card-body">
+            <div class="power-ring-container">
+                <svg class="power-ring" viewBox="0 0 160 160">
+                    <circle class="ring-bg" cx="80" cy="80" r="68"/>
+                    <circle class="ring-fg" id="powerRing" cx="80" cy="80" r="68"/>
+                    <text class="ring-value" x="80" y="68" id="ringPowerVal">0.0</text>
+                    <text class="ring-unit" x="80" y="93">kW</text>
+                </svg>
+            </div>
+            <div class="power-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Voltage</span>
+                    <span class="meta-value" id="metaVoltage">-- V</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Current</span>
+                    <span class="meta-value" id="metaCurrent">-- A</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Temp</span>
+                    <span class="meta-value" id="metaTemp">-- °C</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PWM Parameters Card -->
+    <section class="card card-params">
+        <div class="card-header">
+            <h2>PWM Parameters</h2>
+            <label class="toggle">
+                <input type="checkbox" id="chkEnable">
+                <span class="toggle-slider"></span>
+                <span class="toggle-label" id="lblEnable">OFF</span>
+            </label>
+        </div>
+        <div class="card-body">
+            <div class="param-grid">
+
+                <!-- Frequency -->
+                <div class="param-item">
+                    <div class="param-header">
+                        <h3>Frequency</h3>
+                        <span class="value-badge" id="badgeFreq">40.0 kHz</span>
+                    </div>
+                    <input type="range" id="sliderFreq" class="slider" min="20" max="100" value="40" step="0.5">
+                    <div class="slider-labels"><span>20 kHz</span><span>60 kHz</span><span>100 kHz</span></div>
+                    <div class="numeric-row">
+                        <label for="numFreq">Set</label>
+                        <div class="input-group">
+                            <input type="number" id="numFreq" class="num-input" min="20" max="100" value="40" step="0.5">
+                            <span class="input-unit">kHz</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Duty Cycle -->
+                <div class="param-item">
+                    <div class="param-header">
+                        <h3>Duty Cycle</h3>
+                        <span class="value-badge" id="badgeDuty">45.0 %</span>
+                    </div>
+                    <input type="range" id="sliderDuty" class="slider" min="0" max="100" value="45" step="0.5">
+                    <div class="slider-labels"><span>0%</span><span>50%</span><span>100%</span></div>
+                    <div class="numeric-row">
+                        <label for="numDuty">Set</label>
+                        <div class="input-group">
+                            <input type="number" id="numDuty" class="num-input" min="0" max="100" value="45" step="0.5">
+                            <span class="input-unit">%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dead Time RED -->
+                <div class="param-item">
+                    <div class="param-header">
+                        <h3>Dead Time <span class="hl">RED</span></h3>
+                        <span class="value-badge" id="badgeRed">200 ns</span>
+                    </div>
+                    <input type="range" id="sliderRed" class="slider" min="0" max="1000" value="200" step="5">
+                    <div class="slider-labels"><span>0 ns</span><span>500 ns</span><span>1000 ns</span></div>
+                    <div class="numeric-row">
+                        <label for="numRed">Rising Edge</label>
+                        <div class="input-group">
+                            <input type="number" id="numRed" class="num-input" min="0" max="1000" value="200" step="5">
+                            <span class="input-unit">ns</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dead Time FED -->
+                <div class="param-item">
+                    <div class="param-header">
+                        <h3>Dead Time <span class="hl">FED</span></h3>
+                        <span class="value-badge" id="badgeFed">200 ns</span>
+                    </div>
+                    <input type="range" id="sliderFed" class="slider" min="0" max="1000" value="200" step="5">
+                    <div class="slider-labels"><span>0 ns</span><span>500 ns</span><span>1000 ns</span></div>
+                    <div class="numeric-row">
+                        <label for="numFed">Falling Edge</label>
+                        <div class="input-group">
+                            <input type="number" id="numFed" class="num-input" min="0" max="1000" value="200" step="5">
+                            <span class="input-unit">ns</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Waveform Visualizer Card -->
+    <section class="card card-wide">
+        <div class="card-header">
+            <h2>PWM Output Waveform</h2>
+            <div class="header-leds">
+                <span class="led led-a" id="ledA">A</span>
+                <span class="led led-b" id="ledB">B</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="waveform-container">
+                <svg class="waveform" viewBox="0 0 800 120" preserveAspectRatio="none" id="waveSvg">
+                    <text class="wave-label" x="10" y="18">PWM-A</text>
+                    <text class="wave-label" x="10" y="78">PWM-B</text>
+                    <rect class="dt-zone" x="0" y="44" width="800" height="32"/>
+                    <text class="dt-text" x="400" y="64" text-anchor="middle">DEAD TIME ZONE</text>
+                    <text class="phase-text" x="760" y="110" text-anchor="end">Waiting...</text>
+                </svg>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<script src="/script.js"></script>
 </body>
 </html>
