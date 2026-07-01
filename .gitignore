@@ -1,0 +1,31 @@
+# ── Build artifacts ──
+build/
+*.o
+*.d
+*.elf
+*.map
+*.bin
+
+# ── ESP-IDF sdkconfig (auto-generated) ──
+sdkconfig
+sdkconfig.old
+sdkconfig.esp32*
+
+# ── Python ──
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# ── IDE ──
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+
+# ── Firmware output (CI generates) ──
+firmware/
