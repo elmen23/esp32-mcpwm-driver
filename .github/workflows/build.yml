@@ -29,7 +29,20 @@ jobs:
         run: |
           source /opt/esp/idf/export.sh
           idf.py set-target esp32
-          idf.py build
+          idf.py build 2>&1 | tee build.log
+          echo "BUILD_OK=1" >> build.log
+
+      - name: Show build log on failure
+        if: failure()
+        run: cat build.log 2>/dev/null || echo "No build.log"
+
+      - name: Upload build log (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+          if-no-files-found: warn
 
       - name: Prepare firmware artifacts
         run: |
