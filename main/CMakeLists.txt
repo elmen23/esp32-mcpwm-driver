@@ -8,6 +8,10 @@ idf_component_register(
         nvs_flash
         driver
         esp_timer
+        Drivers
+        Network
+        Web
+        Storage
 )
 
 # Link all project components
