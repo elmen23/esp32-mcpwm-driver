@@ -1,4 +1,4 @@
-name: DIAGNOSTIC — Environment Check
+name: DIAGNOSTIC — Capture Full Output
 
 on:
   push:
@@ -18,64 +18,43 @@ jobs:
       - name: 1. Checkout
         uses: actions/checkout@v4
 
-      - name: 2. Environment variables
+      - name: 2. Full diagnostic + build (capture to file)
+        id: full
         run: |
-          echo "=== IDF_PATH ==="
-          echo "${IDF_PATH:-NOT SET}"
-          echo "=== PATH ==="
-          echo "$PATH" | tr ':' '\n'
-          echo "=== SHELL ==="
-          echo "$SHELL"
-          echo "=== HOME ==="
-          echo "$HOME"
-          echo "=== GITHUB_WORKSPACE ==="
-          echo "$GITHUB_WORKSPACE"
-
-      - name: 3. Working directory and files
-        run: |
-          echo "=== PWD ==="
-          pwd
-          echo "=== ls -la ==="
-          ls -la
-          echo "=== ls -la components/ ==="
-          ls -la components/ 2>/dev/null || echo "NO components/"
-          echo "=== ls -la main/ ==="
-          ls -la main/ 2>/dev/null || echo "NO main/"
-
-      - name: 4. Locate idf.py
-        run: |
-          echo "=== which idf.py ==="
-          which idf.py || echo "NOT FOUND in PATH"
-          echo "=== ls IDF_PATH/tools/ ==="
-          ls "${IDF_PATH}/tools/" 2>/dev/null || echo "IDF_PATH not set"
-          echo "=== ls /opt/esp/ ==="
-          ls /opt/esp/ 2>/dev/null || echo "NO /opt/esp/"
-          echo "=== find idf.py ==="
-          find / -name "idf.py" -type f 2>/dev/null | head -5 || echo "NONE"
-
-      - name: 5. Try idf.py version
-        id: idf_version
-        run: |
-          idf.py --version 2>&1 || echo "EXIT CODE: $?"
+          {
+            echo "================================================"
+            echo "=== 1. ENVIRONMENT ==="
+            echo "IDF_PATH = ${IDF_PATH:-NOT SET}"
+            echo "PWD      = $(pwd)"
+            echo "PATH:"
+            echo "$PATH" | tr ':' '\n'
+            echo ""
+            echo "=== 2. FILES ==="
+            ls -la
+            echo ""
+            echo "=== 3. which idf.py ==="
+            which idf.py || echo "NOT IN PATH"
+            echo ""
+            echo "=== 4. idf.py --version ==="
+            idf.py --version 2>&1
+            echo "EXIT: $?"
+            echo ""
+            echo "=== 5. idf.py set-target esp32 ==="
+            idf.py set-target esp32 2>&1
+            echo "EXIT: $?"
+            echo ""
+            echo "=== 6. idf.py build ==="
+            idf.py build 2>&1
+            echo "EXIT: $?"
+            echo ""
+            echo "=== 7. ls build/ ==="
+            ls -la build/ 2>/dev/null || echo "NO build/"
+          } > /tmp/diag_output.txt 2>&1
         continue-on-error: true
 
-      - name: 6. Try idf.py set-target
-        id: set_target
-        run: |
-          idf.py set-target esp32 2>&1 || echo "EXIT CODE: $?"
-        continue-on-error: true
-
-      - name: 7. Try idf.py build (capture ALL output)
-        id: build
-        run: |
-          idf.py build 2>&1 || echo "EXIT CODE: $?"
-        continue-on-error: true
-
-      - name: 8. Summary
-        if: always()
-        run: |
-          echo "============================================"
-          echo "idf_version outcome: ${{ steps.idf_version.outcome }}"
-          echo "set_target  outcome: ${{ steps.set_target.outcome }}"
-          echo "build       outcome: ${{ steps.build.outcome }}"
-          echo "============================================"
+      - name: 3. Upload diagnostic output
+        uses: actions/upload-artifact@v4
+        with:
+          name: diag-output
+          path: /tmp/diag_output.txt
+          if-no-files-found: error
