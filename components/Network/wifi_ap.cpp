@@ -28,6 +28,7 @@ static esp_netif_t *s_netif           = nullptr;
 static wifi::Mode  s_mode             = wifi::Mode::NONE;
 static char        s_ip_str[16]       = "0.0.0.0";
 static bool        s_sta_connected    = false;
+static bool        s_running          = false;   // guard against reconnect after stop()
 
 /* ════════════════════════════════════════════
  *  Event handler
@@ -62,8 +63,10 @@ static void event_handler(void * /*arg*/,
 
     if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED) {
         s_sta_connected = false;
-        ESP_LOGW(TAG, "Disconnected — reconnecting ...");
-        esp_wifi_connect();
+        if (s_running) {
+            ESP_LOGW(TAG, "Disconnected — reconnecting ...");
+            esp_wifi_connect();
+        }
     }
 
     /* ── IP acquisition ── */
@@ -123,8 +126,10 @@ esp_err_t init_ap() noexcept {
 
     /* ── AP configuration ── */
     wifi_config_t ap_cfg {};
-    std::memcpy(ap_cfg.ap.ssid, AP_SSID, std::strlen(AP_SSID));
-    std::memcpy(ap_cfg.ap.password, AP_PASS, std::strlen(AP_PASS));
+    std::strncpy(reinterpret_cast<char *>(ap_cfg.ap.ssid),
+                 AP_SSID, sizeof(ap_cfg.ap.ssid) - 1);
+    std::strncpy(reinterpret_cast<char *>(ap_cfg.ap.password),
+                 AP_PASS, sizeof(ap_cfg.ap.password) - 1);
     ap_cfg.ap.ssid_len       = 0;            // null-terminated
     ap_cfg.ap.channel        = AP_CHANNEL;
     ap_cfg.ap.authmode       = WIFI_AUTH_WPA_WPA2_PSK;
@@ -136,6 +141,7 @@ esp_err_t init_ap() noexcept {
     ESP_RETURN_ON_ERROR(esp_wifi_start(),                     TAG, "wifi_start");
 
     s_mode = Mode::AP;
+    s_running = true;
     std::strcpy(s_ip_str, "192.168.4.1");
 
     ESP_LOGI(TAG, "AP started — SSID: '%s'  IP: %s  CH: %u",
@@ -179,6 +185,7 @@ esp_err_t init_sta(const char *ssid, const char *pass) noexcept {
     ESP_RETURN_ON_ERROR(esp_wifi_start(),                      TAG, "wifi_start");
 
     s_mode = Mode::STA;
+    s_running = true;
     ESP_LOGI(TAG, "STA connecting to '%s' ...", ssid);
     return ESP_OK;
 }
@@ -204,6 +211,7 @@ const char *get_ip_str() noexcept {
 }
 
 void stop() noexcept {
+    s_running = false;
     esp_wifi_stop();
     esp_wifi_deinit();
     s_mode = Mode::NONE;
