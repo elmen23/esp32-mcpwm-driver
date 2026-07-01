@@ -18,6 +18,8 @@
 #include "nvs_config.hpp"
 #include "esp_log.h"
 #include "esp_system.h"
+#include "esp_chip_info.h"
+#include "esp_check.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 

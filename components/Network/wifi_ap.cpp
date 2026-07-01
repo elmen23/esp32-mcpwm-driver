@@ -13,6 +13,7 @@
 
 #include "wifi_ap.hpp"
 #include "esp_log.h"
+#include "esp_check.h"
 #include "esp_wifi.h"
 #include "esp_netif.h"
 #include "nvs_flash.h"

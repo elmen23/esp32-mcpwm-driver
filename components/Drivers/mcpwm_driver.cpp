@@ -1,6 +1,6 @@
 /**
  * @file    mcpwm_driver.cpp
- * @brief   MCPWM hardware driver implementation (ESP-IDF v5.4 new API).
+ * @brief   MCPWM hardware driver implementation (ESP-IDF v5.4 API).
  *
  * Half-bridge complementary PWM:
  *   • GPIO 18  →  PWM-A (high-side)
@@ -15,9 +15,10 @@
 #include "mcpwm_driver.hpp"
 #include "numeric_utils.hpp"
 #include "esp_log.h"
+#include "esp_check.h"
+#include "esp_bit_defs.h"
 #include "driver/mcpwm_prelude.h"
 #include "driver/gpio.h"
-#include "hal/gpio_types.h"
 
 static constexpr const char *TAG = "MCPWM";
 
@@ -45,7 +46,7 @@ static void update_comparator() noexcept {
     mcpwm_comparator_set_compare_value(s_cmpr, cmp);
 }
 
-/** Apply dead time to a single generator — delay on rising edge (RED/FED). */
+/** Apply dead time to a generator — delay on rising edge (RED/FED). */
 static void apply_dt_to_generator(const mcpwm_gen_handle_t gen,
                                    const uint32_t dt_ns) noexcept {
     mcpwm_dead_time_config_t dt_cfg {};
@@ -74,7 +75,6 @@ esp_err_t init() noexcept {
 
     /* ── 2. Operator ── */
     mcpwm_operator_config_t oper_cfg {};
-    oper_cfg.group_id = 0;
     ESP_RETURN_ON_ERROR(
         mcpwm_new_operator(&oper_cfg, &s_oper), TAG, "new_operator");
     ESP_RETURN_ON_ERROR(
@@ -142,7 +142,7 @@ esp_err_t init() noexcept {
             TAG, "gen_b compare");
     }
 
-    /* ── 8. Dead time: RED on Gen‑A, FED on Gen‑B (each delays its own rising edge) ── */
+    /* ── 8. Dead time: RED on Gen‑A, FED on Gen‑B ── */
     apply_dt_to_generator(s_gen_a, s_cfg.dead_time_red_ns);
     apply_dt_to_generator(s_gen_b, s_cfg.dead_time_fed_ns);
 
@@ -151,7 +151,8 @@ esp_err_t init() noexcept {
 
     /* ── 10. Start with outputs OFF ── */
     ESP_RETURN_ON_ERROR(
-        mcpwm_timer_disable(s_timer), TAG, "timer_disable");
+        mcpwm_timer_start_stop(s_timer, MCPWM_TIMER_STOP_FULL),
+        TAG, "timer_stop");
 
     /* ── 11. Master enable GPIO (active HIGH, pull‑down) ── */
     gpio_config_t en_gpio {};
@@ -254,7 +255,8 @@ esp_err_t set_dead_time(const uint32_t red_ns,
 esp_err_t set_enable(const bool en) noexcept {
     if (en) {
         ESP_RETURN_ON_ERROR(
-            mcpwm_timer_enable(s_timer), TAG, "timer_enable");
+            mcpwm_timer_start_stop(s_timer, MCPWM_TIMER_START_NO_STOP),
+            TAG, "timer_start");
         gpio_set_level(static_cast<gpio_num_t>(utils::GPIO_ENABLE), 1);
     } else {
         // Stop at next timer empty — prevents partial-pulse glitch
@@ -276,15 +278,14 @@ esp_err_t set_enable(const bool en) noexcept {
 esp_err_t emergency_stop() noexcept {
     ESP_LOGW(TAG, "*** EMERGENCY STOP ***");
 
-    // Immediate disable — no waiting for cycle end (safety first)
-    mcpwm_timer_disable(s_timer);
+    // Immediate stop — no waiting for cycle end (safety first)
+    mcpwm_timer_start_stop(s_timer, MCPWM_TIMER_STOP_FULL);
     gpio_set_level(static_cast<gpio_num_t>(utils::GPIO_ENABLE), 0);
     gpio_set_level(static_cast<gpio_num_t>(utils::GPIO_PWM_A), 0);
     gpio_set_level(static_cast<gpio_num_t>(utils::GPIO_PWM_B), 0);
 
     s_cfg.enable       = false;
     s_cfg.duty_percent = 0.0f;
-    // No need to update comparator — timer is already off
 
     return ESP_OK;
 }

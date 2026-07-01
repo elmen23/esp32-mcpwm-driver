@@ -9,6 +9,7 @@
 
 #include "nvs_config.hpp"
 #include "esp_log.h"
+#include "esp_check.h"
 #include "nvs_flash.h"
 #include "nvs.h"
 #include <cstring>
