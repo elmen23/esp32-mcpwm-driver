@@ -46,25 +46,20 @@ static void update_comparator() noexcept {
     mcpwm_comparator_set_compare_value(s_cmpr, cmp);
 }
 
-/** Apply dead time to a generator — RED (posedge delay) or FED (negedge delay). */
-static void apply_dt_red(const mcpwm_gen_handle_t gen,
-                          const uint32_t dt_ns) noexcept {
+/**
+ * Apply dead time between complementary generators (Gen-A → Gen-B).
+ * ESP-IDF v5.4 API: mcpwm_generator_set_dead_time(in_gen, out_gen, config)
+ *   • posedge_delay_ticks  =  FED  (delay Gen-B rising edge)
+ *   • negedge_delay_ticks  =  RED  (delay Gen-B falling edge)
+ */
+static void apply_dead_time(const uint32_t red_ns,
+                             const uint32_t fed_ns) noexcept {
     mcpwm_dead_time_config_t dt_cfg {
-        .posedge_delay_ticks = utils::ns_to_deadtime_ticks(dt_ns),
-        .negedge_delay_ticks = 0,
+        .posedge_delay_ticks = utils::ns_to_deadtime_ticks(fed_ns),
+        .negedge_delay_ticks = utils::ns_to_deadtime_ticks(red_ns),
         .flags.invert_output = false,
     };
-    mcpwm_generator_set_dead_time(gen, &dt_cfg);
-}
-
-static void apply_dt_fed(const mcpwm_gen_handle_t gen,
-                          const uint32_t dt_ns) noexcept {
-    mcpwm_dead_time_config_t dt_cfg {
-        .posedge_delay_ticks = 0,
-        .negedge_delay_ticks = utils::ns_to_deadtime_ticks(dt_ns),
-        .flags.invert_output = false,
-    };
-    mcpwm_generator_set_dead_time(gen, &dt_cfg);
+    mcpwm_generator_set_dead_time(s_gen_a, s_gen_b, &dt_cfg);
 }
 
 /* ════════════════════════════════════════════
@@ -161,9 +156,8 @@ esp_err_t init() noexcept {
             TAG, "gen_b compare");
     }
 
-    /* ── 8. Dead time: RED (posedge) on Gen‑A, FED (negedge) on Gen‑B ── */
-    apply_dt_red(s_gen_a, s_cfg.dead_time_red_ns);
-    apply_dt_fed(s_gen_b, s_cfg.dead_time_fed_ns);
+    /* ── 8. Dead time: RED + FED between Gen‑A and Gen‑B ── */
+    apply_dead_time(s_cfg.dead_time_red_ns, s_cfg.dead_time_fed_ns);
 
     /* ── 9. Set initial comparator ── */
     update_comparator();
@@ -267,8 +261,7 @@ esp_err_t set_dead_time(const uint32_t red_ns,
         return ESP_ERR_INVALID_ARG;
     }
 
-    apply_dt_red(s_gen_a, red_ns);
-    apply_dt_fed(s_gen_b, fed_ns);
+    apply_dead_time(red_ns, fed_ns);
 
     s_cfg.dead_time_red_ns = red_ns;
     s_cfg.dead_time_fed_ns = fed_ns;
