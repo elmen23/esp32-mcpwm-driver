@@ -57,7 +57,7 @@ static void apply_dead_time(const uint32_t red_ns,
     mcpwm_dead_time_config_t dt_cfg {
         .posedge_delay_ticks = utils::ns_to_deadtime_ticks(fed_ns),
         .negedge_delay_ticks = utils::ns_to_deadtime_ticks(red_ns),
-        .flags.invert_output = false,
+        .flags = { .invert_output = false },
     };
     mcpwm_generator_set_dead_time(s_gen_a, s_gen_b, &dt_cfg);
 }
