@@ -76,7 +76,7 @@ Download the latest `.bin` files from [**Releases**](https://github.com/elmen23/
 
 ```bash
 esptool.py --chip esp32 --port /dev/ttyUSB0 \
-  write_flash 0x0 bootloader.bin \
+  write_flash 0x1000 bootloader.bin \
   0x8000 partition-table.bin \
   0x10000 esp32-mcpwm-driver.bin
 ```
