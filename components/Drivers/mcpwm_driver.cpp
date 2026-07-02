@@ -96,21 +96,15 @@ esp_err_t init() noexcept {
 
     /* ── 4. Generator A — high‑side on GPIO 18 ── */
     mcpwm_generator_config_t gen_a_cfg {};
+    gen_a_cfg.gen_gpio_num = utils::GPIO_PWM_A;
     ESP_RETURN_ON_ERROR(
         mcpwm_new_generator(s_oper, &gen_a_cfg, &s_gen_a), TAG, "gen_a");
-    ESP_RETURN_ON_ERROR(
-        mcpwm_generator_set_gpio(s_gen_a, utils::GPIO_PWM_A,
-                                 MCPWM_GEN_GPIO_TYPE_SIGNAL),
-        TAG, "gen_a_gpio");
 
     /* ── 5. Generator B — low‑side on GPIO 19 ── */
     mcpwm_generator_config_t gen_b_cfg {};
+    gen_b_cfg.gen_gpio_num = utils::GPIO_PWM_B;
     ESP_RETURN_ON_ERROR(
         mcpwm_new_generator(s_oper, &gen_b_cfg, &s_gen_b), TAG, "gen_b");
-    ESP_RETURN_ON_ERROR(
-        mcpwm_generator_set_gpio(s_gen_b, utils::GPIO_PWM_B,
-                                 MCPWM_GEN_GPIO_TYPE_SIGNAL),
-        TAG, "gen_b_gpio");
 
     /* ── 6. Actions: Gen-A HIGH on timer=0, LOW on compare ── */
     {
