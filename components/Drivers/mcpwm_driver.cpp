@@ -228,15 +228,11 @@ esp_err_t set_frequency(const uint32_t freq_hz) noexcept {
 
     s_cfg.frequency_hz = freq_hz;
 
-    /* ── Reconfigure timer with new period ── */
-    mcpwm_timer_config_t reconfig {};
-    reconfig.clk_src       = MCPWM_TIMER_CLK_SRC_DEFAULT;
-    reconfig.resolution_hz = utils::MCPWM_RESOLUTION_HZ;
-    reconfig.count_mode    = MCPWM_TIMER_COUNT_MODE_UP;
-    reconfig.period_ticks  = utils::MCPWM_RESOLUTION_HZ / freq_hz;
+    /* ── Set new timer period (glitch-free at next TEZ) ── */
+    const uint32_t period_ticks = utils::MCPWM_RESOLUTION_HZ / freq_hz;
     ESP_RETURN_ON_ERROR(
-        mcpwm_timer_reconfigure(s_timer, &reconfig),
-        TAG, "timer_reconfigure");
+        mcpwm_timer_set_period(s_timer, period_ticks),
+        TAG, "timer_set_period");
 
     /* ── Recalculate comparator so duty % stays correct ── */
     update_comparator();
