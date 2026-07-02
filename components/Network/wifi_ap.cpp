@@ -215,6 +215,10 @@ void stop() noexcept {
     s_running = false;
     esp_wifi_stop();
     esp_wifi_deinit();
+    if (s_netif) {
+        esp_netif_destroy_default_wifi(s_netif);
+        s_netif = nullptr;
+    }
     s_mode = Mode::NONE;
     ESP_LOGI(TAG, "WiFi stopped");
 }

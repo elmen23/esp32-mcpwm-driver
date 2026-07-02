@@ -3,6 +3,7 @@ name: Build ESP32 MCPWM Firmware
 on:
   push:
     branches: [ "main" ]
+    tags: [ "v*" ]
     paths-ignore:
       - '**.md'
   pull_request:
