@@ -3,6 +3,9 @@
 # Target chip
 CONFIG_IDF_TARGET_ESP32=y
 
+# Flash size (4 MB — matches standard ESP32 module)
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+
 # Partition Table
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
