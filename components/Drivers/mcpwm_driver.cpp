@@ -216,7 +216,7 @@ esp_err_t get_config(Config &cfg) noexcept {
 
 /* ────────────────────────────────────────────
  *  set_frequency  —  preserves duty %
- *  Uses mcpwm_timer_reconfigure() for glitch-free
+ *  Uses mcpwm_timer_set_period() for glitch-free
  *  runtime frequency changes.
  * ──────────────────────────────────────────── */
 
@@ -238,7 +238,7 @@ esp_err_t set_frequency(const uint32_t freq_hz) noexcept {
     update_comparator();
 
     ESP_LOGI(TAG, "Frequency updated: %" PRIu32 " kHz  (period=%" PRIu32 " ticks)",
-             freq_hz / 1000, reconfig.period_ticks);
+             freq_hz / 1000, period_ticks);
     return ESP_OK;
 }
 
