@@ -9,5 +9,5 @@ idf_component_register(
         esp_netif
         esp_event
         nvs_flash
-        esp_log
+        log
 )
