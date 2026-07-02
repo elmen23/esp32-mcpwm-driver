@@ -66,7 +66,22 @@
 - Half-bridge gate driver (IR2101/IR2110) + IGBTs/MOSFETs
 - [ESP-IDF v5.4](https://docs.espressif.com/projects/esp-idf/en/v5.4/)
 
-### Build & Flash
+### Option A: Download Pre-built Firmware
+
+Download the latest `.bin` files from [**Releases**](https://github.com/elmen23/esp32-mcpwm-driver/releases/tag/v1.0.0):
+
+- `esp32-mcpwm-driver.bin` → application firmware
+- `bootloader.bin` → bootloader
+- `partition-table.bin` → partition table
+
+```bash
+esptool.py --chip esp32 --port /dev/ttyUSB0 \
+  write_flash 0x0 bootloader.bin \
+  0x8000 partition-table.bin \
+  0x10000 esp32-mcpwm-driver.bin
+```
+
+### Option B: Build from Source
 
 ```bash
 # Clone the repository
